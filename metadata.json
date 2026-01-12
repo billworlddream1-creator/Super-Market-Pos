@@ -1,0 +1,8 @@
+{
+  "name": "SuperMart AI POS",
+  "description": "A comprehensive supermarket management system featuring AI-powered inventory generation, point-of-sale receipt issuance, and detailed sales analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
