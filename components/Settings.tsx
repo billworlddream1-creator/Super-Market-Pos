@@ -2,7 +2,7 @@
 import React from 'react';
 import { AppSettings, PaymentMethodConfig } from '../types';
 import { THEMES } from '../constants';
-import { CreditCard, Banknote, Smartphone, Palette, Shield, Info, Table, Link } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, Palette, Shield, Info, Table, Link, Coins } from 'lucide-react';
 
 interface SettingsProps {
   settings: AppSettings;
@@ -28,6 +28,34 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings }) => {
         <h2 className="text-3xl font-bold text-gray-900">System Settings</h2>
         <p className="text-gray-500">Global configurations for your supermarket terminal.</p>
       </div>
+
+      {/* Currency & Region */}
+      <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b bg-slate-50 flex items-center gap-2">
+          <Coins className="text-indigo-600" size={20} />
+          <h3 className="font-bold text-gray-800">Regional & Currency</h3>
+        </div>
+        <div className="p-6 flex items-center justify-between">
+          <div>
+             <h4 className="font-bold text-slate-800">Operational Currency</h4>
+             <p className="text-sm text-slate-500">Select the currency symbol used across the application.</p>
+          </div>
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+             <button 
+               onClick={() => setSettings({...settings, currency: 'USD'})}
+               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${settings.currency === 'USD' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+             >
+               Dollar ($)
+             </button>
+             <button 
+               onClick={() => setSettings({...settings, currency: 'NGN'})}
+               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${settings.currency === 'NGN' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500'}`}
+             >
+               Naira (₦)
+             </button>
+          </div>
+        </div>
+      </section>
 
       {/* Google Sheets Integration */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

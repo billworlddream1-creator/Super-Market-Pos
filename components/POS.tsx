@@ -1,16 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { Product, CartItem, Receipt, ReceiptItem, PaymentMethodConfig, PaymentStatus } from '../types';
-import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, CheckCircle, ScanBarcode, Printer, Clock, AlertCircle, MapPin, Phone, User, Tag, Percent } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, CheckCircle, ScanBarcode, Printer, Clock, AlertCircle, MapPin, Phone, User, Tag, Percent, Coins } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface POSProps {
   products: Product[];
   onCompleteSale: (receipt: Receipt) => void;
   paymentMethods: PaymentMethodConfig[];
+  currencySymbol: string;
+  currency: 'USD' | 'NGN';
+  onCurrencyChange: (currency: 'USD' | 'NGN') => void;
 }
 
-const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) => {
+const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods, currencySymbol, currency, onCurrencyChange }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -142,6 +145,24 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
               onKeyDown={handleSearchKeyDown}
             />
           </div>
+          
+          <div className="flex bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200">
+             <button 
+               onClick={() => onCurrencyChange('USD')}
+               className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${currency === 'USD' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
+             >
+               <Coins size={14} />
+               <span>USD ($)</span>
+             </button>
+             <button 
+               onClick={() => onCurrencyChange('NGN')}
+               className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${currency === 'NGN' ? 'bg-white shadow-sm text-green-600' : 'text-slate-400'}`}
+             >
+               <Coins size={14} />
+               <span>NGN (₦)</span>
+             </button>
+          </div>
+
           <div className="flex space-x-2 overflow-x-auto no-scrollbar max-w-md">
             {categories.map(cat => (
               <button
@@ -188,9 +209,9 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
                 <div className="mt-auto pt-3 flex justify-between items-center">
                   <div className="flex flex-col">
                     <span className={`font-bold ${product.salePrice ? 'text-red-600' : 'text-indigo-600'}`}>
-                      ${(product.salePrice || product.price).toFixed(2)}
+                      {currencySymbol}{(product.salePrice || product.price).toFixed(2)}
                     </span>
-                    {product.salePrice && <span className="text-[10px] text-gray-400 line-through">${product.price.toFixed(2)}</span>}
+                    {product.salePrice && <span className="text-[10px] text-gray-400 line-through">{currencySymbol}{product.price.toFixed(2)}</span>}
                   </div>
                   <span className={`text-xs px-1.5 py-0.5 rounded ${product.stock < 5 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
                     Stock: {product.stock}
@@ -219,9 +240,17 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
             <div className="relative">
               <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input 
-                type="text" placeholder="Location (Required for Credit)" 
+                type="text" placeholder="Location" 
                 className="w-full pl-9 p-2 text-sm border rounded bg-white focus:ring-2 focus:ring-indigo-500"
                 value={customerLocation} onChange={e => setCustomerLocation(e.target.value)}
+              />
+            </div>
+            <div className="relative">
+              <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input 
+                type="text" placeholder="Phone Number" 
+                className="w-full pl-9 p-2 text-sm border rounded bg-white focus:ring-2 focus:ring-indigo-500"
+                value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
               />
             </div>
           </div>
@@ -244,7 +273,7 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
                     <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs ${isDiscounted ? 'text-green-600 font-bold' : 'text-gray-500'}`}>
-                        ${effectiveUnitPrice.toFixed(2)} / unit
+                        {currencySymbol}{effectiveUnitPrice.toFixed(2)} / unit
                       </span>
                       {isDiscounted && <Percent size={10} className="text-green-600" />}
                     </div>
@@ -262,7 +291,7 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
                   </p>
                 )}
                 <div className="text-right font-black text-slate-800">
-                  ${(effectiveUnitPrice * item.quantity).toFixed(2)}
+                  {currencySymbol}{(effectiveUnitPrice * item.quantity).toFixed(2)}
                 </div>
               </div>
             );
@@ -274,7 +303,7 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
             <span className="text-gray-500">Items ({cartItemCount})</span>
             <div className="text-right">
               <p className="text-xs text-gray-500">Total Bill</p>
-              <p className="text-3xl font-bold text-gray-900">${cartTotal.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-gray-900">{currencySymbol}{cartTotal.toFixed(2)}</p>
             </div>
           </div>
           
@@ -302,12 +331,15 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
             
             <button 
               onClick={() => handleCheckout('Deferred Payment', 'PENDING')}
-              disabled={cart.length === 0 || !customerName || !customerLocation}
+              disabled={cart.length === 0 || !customerName || !customerLocation || !customerPhone}
               className="w-full mt-2 flex items-center justify-center space-x-2 py-3 bg-amber-50 text-amber-700 rounded-xl font-bold border border-amber-100 hover:bg-amber-100 transition-colors disabled:opacity-50"
             >
               <Clock size={18} />
               <span>Settle as Credit (Unpaid)</span>
             </button>
+            {(cart.length > 0 && (!customerName || !customerLocation || !customerPhone)) && (
+              <p className="text-[10px] text-amber-600 font-bold text-center">Name, Location & Phone required for credit</p>
+            )}
           </div>
         </div>
       </div>
@@ -316,13 +348,14 @@ const POS: React.FC<POSProps> = ({ products, onCompleteSale, paymentMethods }) =
         <ReceiptModal 
           receipt={showReceiptModal} 
           onClose={() => setShowReceiptModal(null)} 
+          currencySymbol={currencySymbol}
         />
       )}
     </div>
   );
 };
 
-const ReceiptModal = ({ receipt, onClose }: { receipt: Receipt, onClose: () => void }) => {
+const ReceiptModal = ({ receipt, onClose, currencySymbol }: { receipt: Receipt, onClose: () => void, currencySymbol: string }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:p-0 print:bg-white animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col max-h-[90vh] print:shadow-none print:max-h-full print:w-full">
@@ -350,9 +383,9 @@ const ReceiptModal = ({ receipt, onClose }: { receipt: Receipt, onClose: () => v
               <div key={idx} className="flex justify-between items-start gap-4">
                 <span className="flex-1">
                    {item.quantity}x {item.name}
-                   <p className="text-[10px] text-gray-400">@ ${item.priceAtSale.toFixed(2)} {item.discountApplied ? `(${item.discountApplied}% OFF)` : ''}</p>
+                   <p className="text-[10px] text-gray-400">@ {currencySymbol}{item.priceAtSale.toFixed(2)} {item.discountApplied ? `(${item.discountApplied}% OFF)` : ''}</p>
                 </span>
-                <span className="font-bold">${item.total.toFixed(2)}</span>
+                <span className="font-bold">{currencySymbol}{item.total.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -360,7 +393,7 @@ const ReceiptModal = ({ receipt, onClose }: { receipt: Receipt, onClose: () => v
           <div className="space-y-2 border-t border-dashed border-gray-200 pt-4">
             <div className="flex justify-between font-black text-xl">
               <span>TOTAL</span>
-              <span>${receipt.totalAmount.toFixed(2)}</span>
+              <span>{currencySymbol}{receipt.totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex flex-col gap-1 text-gray-600 text-xs pt-2">
               <div className="flex justify-between">
@@ -371,6 +404,12 @@ const ReceiptModal = ({ receipt, onClose }: { receipt: Receipt, onClose: () => v
                 <div className="flex justify-between">
                   <span>Location</span>
                   <span className="font-bold truncate max-w-[150px]">{receipt.customerLocation}</span>
+                </div>
+              )}
+              {receipt.customerPhone && (
+                <div className="flex justify-between">
+                  <span>Phone</span>
+                  <span className="font-bold">{receipt.customerPhone}</span>
                 </div>
               )}
             </div>

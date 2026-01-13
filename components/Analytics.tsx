@@ -2,50 +2,63 @@
 import React, { useState, useMemo } from 'react';
 import { Receipt, SalesSummary } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { DollarSign, ShoppingBag, CreditCard, TrendingUp, Calendar, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { DollarSign, ShoppingBag, CreditCard, TrendingUp, Calendar, ArrowUpRight, ArrowDownRight, Activity, Receipt as ReceiptIcon } from 'lucide-react';
 
 interface AnalyticsProps {
   receipts: Receipt[];
+  currencySymbol: string;
 }
 
-const Analytics: React.FC<AnalyticsProps> = ({ receipts }) => {
+const Analytics: React.FC<AnalyticsProps> = ({ receipts, currencySymbol }) => {
   const [timeRange, setTimeRange] = useState<'DAY' | 'WEEK' | 'MONTH' | 'YEAR'>('WEEK');
 
-  // Revenue by Period Calculation
-  const periodRevenue = useMemo(() => {
+  // Filter out cancelled receipts for valid analytics
+  const validReceipts = useMemo(() => receipts.filter(r => r.status !== 'CANCELLED'), [receipts]);
+  const paidReceipts = useMemo(() => validReceipts.filter(r => r.status === 'PAID'), [validReceipts]);
+
+  // Calculations
+  const periodData = useMemo(() => {
     const now = new Date();
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const weekStart = dayStart - (now.getDay() * 24 * 60 * 60 * 1000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
 
-    const filtered = receipts.filter(r => r.status === 'PAID');
+    const getRevenue = (start: number) => paidReceipts.filter(r => r.timestamp >= start).reduce((sum, r) => sum + r.totalAmount, 0);
+    const getCount = (start: number) => validReceipts.filter(r => r.timestamp >= start).length;
 
     return {
-      day: filtered.filter(r => r.timestamp >= dayStart).reduce((sum, r) => sum + r.totalAmount, 0),
-      week: filtered.filter(r => r.timestamp >= weekStart).reduce((sum, r) => sum + r.totalAmount, 0),
-      month: filtered.filter(r => r.timestamp >= monthStart).reduce((sum, r) => sum + r.totalAmount, 0),
-      year: filtered.filter(r => r.timestamp >= yearStart).reduce((sum, r) => sum + r.totalAmount, 0),
+      revenue: {
+        day: getRevenue(dayStart),
+        week: getRevenue(weekStart),
+        month: getRevenue(monthStart),
+        year: getRevenue(yearStart),
+      },
+      count: {
+        day: getCount(dayStart),
+        week: getCount(weekStart),
+        month: getCount(monthStart),
+        year: getCount(yearStart),
+      }
     };
-  }, [receipts]);
+  }, [paidReceipts, validReceipts]);
 
   const summary: SalesSummary = useMemo(() => {
-    const paid = receipts.filter(r => r.status === 'PAID');
     return {
-      totalRevenue: paid.reduce((sum, r) => sum + r.totalAmount, 0),
-      totalItemsSold: paid.reduce((sum, r) => sum + r.items.reduce((iSum, i) => iSum + i.quantity, 0), 0),
-      totalTransactions: paid.length,
-      totalUsers: 0, // Placeholder
-      periodRevenue: periodRevenue
+      totalRevenue: paidReceipts.reduce((sum, r) => sum + r.totalAmount, 0),
+      totalItemsSold: paidReceipts.reduce((sum, r) => sum + r.items.reduce((iSum, i) => iSum + i.quantity, 0), 0),
+      totalTransactions: paidReceipts.length,
+      totalUsers: 0, 
+      periodRevenue: periodData.revenue,
+      periodCounts: periodData.count
     };
-  }, [receipts, periodRevenue]);
+  }, [paidReceipts, periodData]);
 
   // Grouped Chart Data
   const chartData = useMemo(() => {
     const data: Record<string, number> = {};
-    const paid = receipts.filter(r => r.status === 'PAID');
     
-    paid.forEach(r => {
+    paidReceipts.forEach(r => {
       const date = new Date(r.timestamp);
       let key = '';
 
@@ -66,7 +79,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ receipts }) => {
       name: key,
       sales: data[key]
     }));
-  }, [receipts, timeRange]);
+  }, [paidReceipts, timeRange]);
 
   // Payment Status Distribution
   const statusData = useMemo(() => {
@@ -105,14 +118,24 @@ const Analytics: React.FC<AnalyticsProps> = ({ receipts }) => {
       </div>
 
       {/* Revenue Periods */}
+      <h3 className="text-lg font-black text-gray-900 flex items-center gap-2"><DollarSign size={20} className="text-indigo-500"/> Revenue Overview</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <RevenueCard label="Today's Intake" amount={summary.periodRevenue.day} period="24h" trend="+12.5%" />
-        <RevenueCard label="This Week" amount={summary.periodRevenue.week} period="7d" trend="+8.2%" />
-        <RevenueCard label="Monthly Goal" amount={summary.periodRevenue.month} period="30d" trend="+15.1%" />
-        <RevenueCard label="Annual Yield" amount={summary.periodRevenue.year} period="365d" trend="+22.4%" />
+        <RevenueCard label="Today's Intake" amount={summary.periodRevenue.day} period="24h" trend="+12.5%" symbol={currencySymbol} />
+        <RevenueCard label="This Week" amount={summary.periodRevenue.week} period="7d" trend="+8.2%" symbol={currencySymbol} />
+        <RevenueCard label="Monthly Goal" amount={summary.periodRevenue.month} period="30d" trend="+15.1%" symbol={currencySymbol} />
+        <RevenueCard label="Annual Yield" amount={summary.periodRevenue.year} period="365d" trend="+22.4%" symbol={currencySymbol} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Receipt Count Periods */}
+      <h3 className="text-lg font-black text-gray-900 flex items-center gap-2 mt-8"><ReceiptIcon size={20} className="text-blue-500"/> Transaction Volume (Receipts Printed)</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <CountCard label="Today" count={summary.periodCounts.day} period="24h" />
+        <CountCard label="This Week" count={summary.periodCounts.week} period="7d" />
+        <CountCard label="This Month" count={summary.periodCounts.month} period="30d" />
+        <CountCard label="This Year" count={summary.periodCounts.year} period="365d" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
         {/* Main Sales Trend Chart */}
         <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 group hover:shadow-xl transition-all">
           <div className="flex items-center justify-between mb-8">
@@ -127,10 +150,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ receipts }) => {
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}} dy={15} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}} tickFormatter={(value) => `$${value}`} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}} tickFormatter={(value) => `${currencySymbol}${value}`} />
                 <Tooltip 
                   cursor={{fill: '#f9fafb', radius: 8}}
                   contentStyle={{borderRadius: '1.5rem', border: 'none', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.1)', padding: '1rem'}}
+                  formatter={(value: any) => [`${currencySymbol}${value}`, 'Revenue']}
                 />
                 <Bar dataKey="sales" fill="#4F46E5" radius={[12, 12, 12, 12]} barSize={32} />
               </BarChart>
@@ -180,7 +204,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ receipts }) => {
   );
 };
 
-const RevenueCard = ({ label, amount, period, trend }: any) => {
+const RevenueCard = ({ label, amount, period, trend, symbol }: any) => {
   const isPositive = trend.startsWith('+');
   return (
     <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:border-indigo-100 hover:shadow-lg transition-all">
@@ -195,8 +219,25 @@ const RevenueCard = ({ label, amount, period, trend }: any) => {
       </div>
       <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
       <div className="flex items-baseline gap-2">
-        <h4 className="text-3xl font-black text-gray-900 tracking-tighter">${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+        <h4 className="text-3xl font-black text-gray-900 tracking-tighter">{symbol}{amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
         <span className="text-xs font-bold text-gray-400">/{period}</span>
+      </div>
+    </div>
+  );
+};
+
+const CountCard = ({ label, count, period }: any) => {
+  return (
+    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:border-blue-100 hover:shadow-lg transition-all">
+      <div className="flex items-center justify-between mb-4">
+        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+          <ReceiptIcon size={24} />
+        </div>
+      </div>
+      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
+      <div className="flex items-baseline gap-2">
+        <h4 className="text-3xl font-black text-gray-900 tracking-tighter">{count}</h4>
+        <span className="text-xs font-bold text-gray-400">receipts</span>
       </div>
     </div>
   );

@@ -1,12 +1,15 @@
+
 import React from 'react';
 import { Receipt } from '../types';
-import { FileText, Clock, User, DollarSign, Download, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { FileText, Clock, User, DollarSign, Download, CheckCircle, AlertCircle, XCircle, Ban } from 'lucide-react';
 
 interface ReceiptHistoryProps {
   receipts: Receipt[];
+  onCancelReceipt: (id: string) => void;
+  currencySymbol: string;
 }
 
-const ReceiptHistory: React.FC<ReceiptHistoryProps> = ({ receipts }) => {
+const ReceiptHistory: React.FC<ReceiptHistoryProps> = ({ receipts, onCancelReceipt, currencySymbol }) => {
   // Sort by newest first
   const sortedReceipts = [...receipts].sort((a, b) => b.timestamp - a.timestamp);
 
@@ -93,7 +96,7 @@ const ReceiptHistory: React.FC<ReceiptHistoryProps> = ({ receipts }) => {
         ) : (
           <div className="divide-y divide-gray-100">
             {sortedReceipts.map(receipt => (
-              <div key={receipt.id} className="p-6 hover:bg-gray-50 transition-colors cursor-pointer group">
+              <div key={receipt.id} className="p-6 hover:bg-gray-50 transition-colors group relative">
                 <div className="flex justify-between items-start mb-4">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
@@ -111,14 +114,16 @@ const ReceiptHistory: React.FC<ReceiptHistoryProps> = ({ receipts }) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-black text-gray-900 tracking-tight">${receipt.totalAmount.toFixed(2)}</div>
+                    <div className={`text-xl font-black tracking-tight ${receipt.status === 'CANCELLED' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                      {currencySymbol}{receipt.totalAmount.toFixed(2)}
+                    </div>
                     <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mt-1">
                       VIA {receipt.paymentMethod}
                     </div>
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600 group-hover:bg-white border border-transparent group-hover:border-gray-200 transition-all">
+                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600 group-hover:bg-white border border-transparent group-hover:border-gray-200 transition-all flex justify-between items-center">
                   <div className="flex flex-wrap gap-2">
                     {receipt.items.map((item, idx) => (
                       <span key={idx} className="inline-flex items-center bg-white px-3 py-1 rounded-lg border border-gray-200 text-xs shadow-sm font-medium">
@@ -127,6 +132,15 @@ const ReceiptHistory: React.FC<ReceiptHistoryProps> = ({ receipts }) => {
                       </span>
                     ))}
                   </div>
+                  {receipt.status !== 'CANCELLED' && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onCancelReceipt(receipt.id); }}
+                      className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-xs font-bold"
+                    >
+                      <Ban size={14} />
+                      <span>Cancel Receipt</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

@@ -12,13 +12,15 @@ interface ProductManagerProps {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   lowStockThreshold: number;
   setLowStockThreshold: (val: number) => void;
+  currencySymbol: string;
 }
 
 const ProductManager: React.FC<ProductManagerProps> = ({ 
   products, 
   setProducts, 
   lowStockThreshold, 
-  setLowStockThreshold 
+  setLowStockThreshold,
+  currencySymbol
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -356,8 +358,8 @@ const ProductManager: React.FC<ProductManagerProps> = ({
                   <LineChart data={getPriceHistory(viewingHistory.price)}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} tickFormatter={(val) => `$${val.toFixed(2)}`} />
-                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} formatter={(val: number) => [`$${val.toFixed(2)}`, 'Price']} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} tickFormatter={(val) => `${currencySymbol}${val.toFixed(2)}`} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} formatter={(val: number) => [`${currencySymbol}${val.toFixed(2)}`, 'Price']} />
                     <Line type="monotone" dataKey="price" stroke="#4F46E5" strokeWidth={3} dot={{ r: 4, fill: '#4F46E5', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -385,11 +387,11 @@ const ProductManager: React.FC<ProductManagerProps> = ({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">Regular Price ($)</label>
+              <label className="text-xs font-bold text-slate-500 uppercase">Regular Price ({currencySymbol})</label>
               <input type="number" placeholder="Price *" className="w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">Sale Price ($)</label>
+              <label className="text-xs font-bold text-slate-500 uppercase">Sale Price ({currencySymbol})</label>
               <input type="number" placeholder="Optional Sale Price" className="w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none" value={newProduct.salePrice || ''} onChange={e => setNewProduct({...newProduct, salePrice: parseFloat(e.target.value) || undefined})} />
             </div>
             <div className="space-y-1">
@@ -472,6 +474,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({
                 onSave={(updated) => handleSaveEdit(product.id, updated)}
                 onDelete={() => handleDelete(product.id)}
                 onViewHistory={() => setViewingHistory(product)}
+                currencySymbol={currencySymbol}
               />
             ))}
           </tbody>
@@ -490,7 +493,8 @@ const EditableRow: React.FC<{
   onSave: (p: Partial<Product>) => void;
   onDelete: () => void;
   onViewHistory: () => void;
-}> = ({ product, isEditing, lowStockThreshold, onEdit, onCancel, onSave, onDelete, onViewHistory }) => {
+  currencySymbol: string;
+}> = ({ product, isEditing, lowStockThreshold, onEdit, onCancel, onSave, onDelete, onViewHistory, currencySymbol }) => {
   const [edited, setEdited] = useState(product);
   const isLowStock = product.stock <= lowStockThreshold;
 
@@ -590,11 +594,11 @@ const EditableRow: React.FC<{
       <td className="px-6 py-6">
         <div className="flex flex-col">
           <span className={`font-mono font-bold text-lg ${product.salePrice ? 'text-gray-400 line-through text-sm' : 'text-slate-800'}`}>
-            ${product.price.toFixed(2)}
+            {currencySymbol}{product.price.toFixed(2)}
           </span>
           {product.salePrice && (
             <span className="font-mono font-black text-red-600 text-lg">
-              ${product.salePrice.toFixed(2)}
+              {currencySymbol}{product.salePrice.toFixed(2)}
             </span>
           )}
         </div>

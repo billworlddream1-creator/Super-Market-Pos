@@ -8,9 +8,10 @@ interface DebtorsProps {
   receipts: Receipt[];
   onClearDebt: (id: string) => void;
   onRemoveDebtor: (id: string) => void;
+  currencySymbol: string;
 }
 
-const Debtors: React.FC<DebtorsProps> = ({ debtors, receipts, onClearDebt, onRemoveDebtor }) => {
+const Debtors: React.FC<DebtorsProps> = ({ debtors, receipts, onClearDebt, onRemoveDebtor, currencySymbol }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatement, setSelectedStatement] = useState<{ debtor: Debtor, items: any[] } | null>(null);
 
@@ -93,7 +94,7 @@ const Debtors: React.FC<DebtorsProps> = ({ debtors, receipts, onClearDebt, onRem
               <div className="flex items-end justify-between border-t border-slate-50 pt-6 mt-2">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Owed</p>
-                  <p className="text-3xl font-black text-red-600 tracking-tighter">${debtor.totalOwed.toFixed(2)}</p>
+                  <p className="text-3xl font-black text-red-600 tracking-tighter">{currencySymbol}{debtor.totalOwed.toFixed(2)}</p>
                 </div>
                 <div className="flex gap-2">
                   <button 
@@ -134,14 +135,15 @@ const Debtors: React.FC<DebtorsProps> = ({ debtors, receipts, onClearDebt, onRem
         <DebtStatementModal 
           debtor={selectedStatement.debtor} 
           items={selectedStatement.items} 
-          onClose={() => setSelectedStatement(null)} 
+          onClose={() => setSelectedStatement(null)}
+          currencySymbol={currencySymbol}
         />
       )}
     </div>
   );
 };
 
-const DebtStatementModal = ({ debtor, items, onClose }: { debtor: Debtor, items: any[], onClose: () => void }) => {
+const DebtStatementModal = ({ debtor, items, onClose, currencySymbol }: { debtor: Debtor, items: any[], onClose: () => void, currencySymbol: string }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:p-0 print:bg-white animate-in fade-in duration-200">
       <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] print:shadow-none print:max-h-full print:w-full">
@@ -185,7 +187,7 @@ const DebtStatementModal = ({ debtor, items, onClose }: { debtor: Debtor, items:
                        <span>#{item.receiptId}</span>
                      </div>
                   </div>
-                  <span className="font-black text-slate-800">${item.total.toFixed(2)}</span>
+                  <span className="font-black text-slate-800">{currencySymbol}{item.total.toFixed(2)}</span>
                 </div>
               ))
             )}
@@ -194,7 +196,7 @@ const DebtStatementModal = ({ debtor, items, onClose }: { debtor: Debtor, items:
           <div className="space-y-3 border-t-2 border-slate-900 pt-6">
             <div className="flex justify-between font-black text-2xl tracking-tighter text-red-600">
               <span>TOTAL OWED</span>
-              <span>${debtor.totalOwed.toFixed(2)}</span>
+              <span>{currencySymbol}{debtor.totalOwed.toFixed(2)}</span>
             </div>
             <div className="pt-8 text-center border-t border-dashed border-gray-200 mt-10">
                <p className="text-[10px] text-gray-400 font-bold mb-6">Report Date: {new Date().toLocaleString()}</p>

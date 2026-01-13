@@ -7,7 +7,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const generateProducts = async (category: string, count: number = 5): Promise<Partial<Product>[]> => {
   try {
     const prompt = `Generate ${count} realistic supermarket products for the category "${category}". 
-    Include a creative name, a realistic price (USD), initial stock count (between 10 and 100), and a short description.`;
+    Include a creative name, a realistic price (USD), initial stock count (between 10 and 100), and a short description.
+    Occasionally (30% of the time), include a 'salePrice' that is lower than the price.
+    Occasionally (20% of the time), include a 'quantityDiscountThreshold' (e.g., 3, 5, 10) and a 'quantityDiscountPercentage' (e.g., 5, 10, 15).`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -21,6 +23,9 @@ export const generateProducts = async (category: string, count: number = 5): Pro
             properties: {
               name: { type: Type.STRING },
               price: { type: Type.NUMBER },
+              salePrice: { type: Type.NUMBER, description: "Optional sale price" },
+              quantityDiscountThreshold: { type: Type.INTEGER, description: "Optional min quantity for discount" },
+              quantityDiscountPercentage: { type: Type.INTEGER, description: "Optional discount percent" },
               stock: { type: Type.INTEGER },
               description: { type: Type.STRING },
               category: { type: Type.STRING }
@@ -37,7 +42,7 @@ export const generateProducts = async (category: string, count: number = 5): Pro
     const rawData = JSON.parse(text);
     return rawData.map((item: any) => ({
       ...item,
-      imageUrl: `https://source.unsplash.com/featured/?${encodeURIComponent(item.name + ' ' + item.category)}`,
+      imageUrl: `https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200&q=80`, // Reliable generic placeholder
       isAiGenerated: true
     }));
   } catch (error) {

@@ -40,6 +40,7 @@ const App: React.FC = () => {
       lowStockThreshold: 10,
       themeColor: '#4f46e5',
       googleSheetUrl: '',
+      currency: 'USD',
       paymentMethods: [
         { id: '1', label: 'Cash Payment', enabled: true, type: 'CASH' },
         { id: '2', label: 'Credit/Debit Card', enabled: true, type: 'CARD' },
@@ -62,6 +63,8 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('debtors');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const currencySymbol = settings.currency === 'NGN' ? '₦' : '$';
 
   // Apply random theme on login
   useEffect(() => {
@@ -145,6 +148,45 @@ const App: React.FC = () => {
     }
   };
 
+  const handleReceiptCancel = (receiptId: string) => {
+    const receiptToCancel = receipts.find(r => r.id === receiptId);
+    if (!receiptToCancel || receiptToCancel.status === 'CANCELLED') return;
+
+    if (!confirm("Are you sure you want to cancel this receipt? Stock will be restored.")) return;
+
+    // 1. Mark Receipt as Cancelled
+    setReceipts(prev => prev.map(r => r.id === receiptId ? { ...r, status: 'CANCELLED' } : r));
+
+    // 2. Restore Stock
+    setProducts(prevProducts => {
+      const updated = [...prevProducts];
+      receiptToCancel.items.forEach(item => {
+        const productIndex = updated.findIndex(p => p.id === item.productId);
+        if (productIndex !== -1) {
+          updated[productIndex] = {
+            ...updated[productIndex],
+            stock: updated[productIndex].stock + item.quantity
+          };
+        }
+      });
+      return updated;
+    });
+
+    // 3. If it was a credit sale (PENDING), reduce debtor amount
+    if (receiptToCancel.status === 'PENDING' && receiptToCancel.customerName) {
+      setDebtors(prev => prev.map(d => {
+        if (d.name.toLowerCase() === receiptToCancel.customerName?.toLowerCase()) {
+          return {
+            ...d,
+            totalOwed: Math.max(0, d.totalOwed - receiptToCancel.totalAmount),
+            lastUpdate: Date.now()
+          };
+        }
+        return d;
+      }));
+    }
+  };
+
   const handleClearDebt = (id: string) => {
     const debtor = debtors.find(d => d.id === id);
     if (!debtor) return;
@@ -169,7 +211,16 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'POS':
-        return <POS products={products} onCompleteSale={handleSaleComplete} paymentMethods={settings.paymentMethods} />;
+        return (
+          <POS 
+            products={products} 
+            onCompleteSale={handleSaleComplete} 
+            paymentMethods={settings.paymentMethods} 
+            currencySymbol={currencySymbol} 
+            currency={settings.currency}
+            onCurrencyChange={(c) => setSettings({...settings, currency: c})}
+          />
+        );
       case 'PRODUCTS':
         return (
           <ProductManager 
@@ -177,14 +228,15 @@ const App: React.FC = () => {
             setProducts={setProducts} 
             lowStockThreshold={settings.lowStockThreshold}
             setLowStockThreshold={(v) => setSettings({...settings, lowStockThreshold: v})}
+            currencySymbol={currencySymbol}
           />
         );
       case 'ANALYTICS':
-        return <Analytics receipts={receipts} />;
+        return <Analytics receipts={receipts} currencySymbol={currencySymbol} />;
       case 'RECEIPTS':
-        return <ReceiptHistory receipts={receipts} />;
+        return <ReceiptHistory receipts={receipts} onCancelReceipt={handleReceiptCancel} currencySymbol={currencySymbol} />;
       case 'DEBTORS':
-        return <Debtors debtors={debtors} receipts={receipts} onClearDebt={handleClearDebt} onRemoveDebtor={handleRemoveDebtor} />;
+        return <Debtors debtors={debtors} receipts={receipts} onClearDebt={handleClearDebt} onRemoveDebtor={handleRemoveDebtor} currencySymbol={currencySymbol} />;
       case 'SHEET':
         return <SpreadsheetView sheetUrl={settings.googleSheetUrl} />;
       case 'SETTINGS':
@@ -205,6 +257,7 @@ const App: React.FC = () => {
             portalUserCount={registeredUsers.length}
             messageCount={messages.length}
             debtorCount={debtors.filter(d => d.totalOwed > 0).length}
+            currencySymbol={currencySymbol}
           />
         );
     }
@@ -284,9 +337,10 @@ const DashboardOverview: React.FC<{
   user: User,
   portalUserCount: number,
   messageCount: number,
-  debtorCount: number
-}> = ({ onChangeView, products, receipts, lowStockThreshold, user, portalUserCount, messageCount, debtorCount }) => {
-  const totalSales = receipts.reduce((sum, r) => sum + r.totalAmount, 0);
+  debtorCount: number,
+  currencySymbol: string
+}> = ({ onChangeView, products, receipts, lowStockThreshold, user, portalUserCount, messageCount, debtorCount, currencySymbol }) => {
+  const totalSales = receipts.filter(r => r.status === 'PAID').reduce((sum, r) => sum + r.totalAmount, 0);
   const lowStockItems = products.filter(p => p.stock <= lowStockThreshold);
   const salutation = useMemo(() => STAFF_SALUTATIONS[Math.floor(Math.random() * STAFF_SALUTATIONS.length)], []);
 
@@ -374,7 +428,7 @@ const DashboardOverview: React.FC<{
           <div>
             <h3 className="text-2xl font-black mb-1">Records</h3>
             <p className="text-xs text-slate-400 font-medium">Synced to Google Sheets</p>
-            <p className="text-2xl font-bold text-white tracking-tight mt-2">${totalSales.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-white tracking-tight mt-2">{currencySymbol}{totalSales.toLocaleString()}</p>
           </div>
         </div>
       </div>

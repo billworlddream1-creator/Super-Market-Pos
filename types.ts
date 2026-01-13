@@ -61,6 +61,12 @@ export interface SalesSummary {
     month: number;
     year: number;
   };
+  periodCounts: {
+    day: number;
+    week: number;
+    month: number;
+    year: number;
+  };
 }
 
 export type ViewState = 'DASHBOARD' | 'POS' | 'PRODUCTS' | 'ANALYTICS' | 'RECEIPTS' | 'SETTINGS' | 'CHAT' | 'USERS' | 'DEBTORS' | 'SHEET';
@@ -113,4 +119,5 @@ export interface AppSettings {
   paymentMethods: PaymentMethodConfig[];
   themeColor: string;
   googleSheetUrl: string;
+  currency: 'USD' | 'NGN';
 }
